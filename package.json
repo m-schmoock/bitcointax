@@ -1,0 +1,18 @@
+{
+  "name": "bitcointax",
+  "version": "0.6.0",
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:m-schmoock/bitcointax.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bitcoinjs-lib": "^3.3.2"
+  }
+}

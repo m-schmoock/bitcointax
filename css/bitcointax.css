@@ -1,0 +1,26 @@
+.table { display:table }
+.header { display:table-header-group; font-weight:bold; position: sticky; top: 0; background-color: #fff}
+.rowGroup { display:table-row-group; }
+.row { display:table-row; }
+.cell { display:table-cell; width:7%; padding-left: 5px; padding-right:5px; }
+.green { background-color:#AFA}
+.red { background-color:#FAA}
+#author { position:absolute; top:10px; right:164px }
+#donate { position:absolute; top:10px; right:10px } 
+.inputh3 { text-align:center }
+.input { font-size:small }
+.output { font-size:small }
+#controls {
+    border: 2px dashed;
+    border-color: green;
+    padding: 5px;
+    display: inline-block;
+}
+#sells { font-family: monospace }
+#profits { 
+    display: none;
+    font-family: monospace; 
+    border: 2px dashed;
+    padding: 5px;
+    border-color: red;
+}

@@ -1,0 +1,48 @@
+<html>
+<head>
+    <title>Bitcoin CSV tax parser</title>
+    <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="js/jquery.csv.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="js/btcavg_global.js"></script>
+    <script type="text/javascript" src="js/bitcointaxlib.js"></script>
+    <script type="text/javascript" src="js/bitcointax.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/bitcointax.css">
+</head>
+<body>
+    <h1>Bitcoin TAX calculator</h1>
+    <pre id="author">
+Version     0.6
+Author      Michael Schmoock <michael@schmoock.net>
+Supports    Bitcoin.de, Bitwala, Xapo, Kraken
+Currencies  Currently only BTC and Eur
+Donations   BC1QQH60JQV32QG3YN3TGDSX6DPJGA7EPER6S5UKNT
+Disclaimer  Use at own risk
+    </pre>
+    <img src="img/donate.png" id="donate" alt="qrcode"></img>
+    <div id="controls">
+        <h5>Global settings</h5>
+        <label><input class="check_fifo" name="check_fifo" id="check_fifo" type="radio" checked>FIFO</label>
+        <label><input class="check_fifo" name="check_fifo" id="check_lifo" type="radio"        >LIFO</label>
+        <br />
+        <label><input class="check_hodl" type="checkbox" checked>Tax free after 1yr</label>
+        <hr />
+        <h5>Settings per year</h5>
+        <div id="yearlySettings"></div>
+        <hr />
+        <input type="file" id="files" multiple>
+        <input type="button" onclick="doIt()" value="  GO  "/>
+    </div>
+    
+    <h2>Summary</h2>
+    <div id="charts"></div>
+
+    <h2>Liquidations</h2>
+    <button onclick="$('#history').toggle()">Toggle CSV Output</button>
+    <div id="history" style="display:none"></div>
+    <div id="sells"></div>
+
+    <h2>Input files</h2><div id="inputs"></div>
+</body>
+</html>
