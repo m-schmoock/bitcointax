@@ -1,8 +1,27 @@
 ## Bitcoin tax calculation JS website
 
-consumes CSV data from various exchanges
-calculates taxes in fifo or lifo
-visualizes profits and stake
+This page consumes CSV report data from various exchanges and sources,
+calculates taxes in fifo or lifo style and visualizes profits and stake.
+
+**It will not upload your data anywhere.** It does all the calculation
+in your browsers JavaScript engine. Check the code, if concerned or
+enable your browsers tab offline developer option.
+
+GoogleCharts is used for rendering, this requires online usage
+becuase the GoogleChart libs must be fetched dynamically from google.
+BitcoinAverage is used for exchange rates, if not given from input files.
+
+Currently only supports BTC/EUR pair and the following exchange formats:
+- Bitcoin.de
+- Kraken
+- Xapo Visa card (business closed down end 2017)
+- Bitwala Sepa transfers (old format)
+- Bitwala Card TopUps (old format)
+- Custom OTC csv format for manual entries
+
+**Note: Use at own risk!**
+
+I am currently working on also enabling xpubkey transaction tracking.
 
 ## Use page via github.io pages:
 https://m-schmoock.github.io/bitcointax/
