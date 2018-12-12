@@ -4,10 +4,8 @@ consumes CSV data from various exchanges
 calculates taxes in fifo or lifo
 visualizes profits and stake
 
-## github.io page enabled:
-```
+## Use page via github.io pages:
 https://m-schmoock.github.io/bitcointax/
-```
 
 ## Browserify the lib
 
