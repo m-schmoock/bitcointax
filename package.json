@@ -6,14 +6,16 @@
     "type": "git",
     "url": "git@github.com:m-schmoock/bitcointax.git"
   },
-  "main": "index.js",
+  "main": "src/bitcointaxlib.js",
   "scripts": {
+    "node": "node --inspect -i -e \"let lib = require('./src/bitcointaxlib.js')\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "browserify" : "browserify index.js --standalone bitcointaxlib > js/bitcointaxlib.js"
+    "browserify": "browserify scr/bitcointaxlib.js --standalone bitcointaxlib > js/bitcointaxlib.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bitcoinjs-lib": "^3.3.2"
+    "bitcoinjs-lib": "^3.3.2",
+    "jayson": "^2.1.0"
   }
 }

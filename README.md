@@ -9,11 +9,12 @@ so LIFO/FIFO actually makes sense.
 in your browsers JavaScript engine. Check the code, if concerned or
 enable your browsers tab offline developer option.
 
-GoogleCharts is used for rendering, this requires online usage
-becuase the GoogleChart libs must be fetched dynamically from google.
 BitcoinAverage is used for exchange rates, if not given from input files.
+GoogleCharts is used for rendering, this requires online usage
+since GoogleChart libs must be fetched dynamically from Google CDN.
+Still, using GoogleCharts CDN libs will not upload your charts data anywhere.
 
-Currently only supports BTC/EUR pair and the following exchange formats:
+This project currently supports BTC/EUR pair and the following formats:
 - Bitcoin.de
 - Kraken
 - Xapo Visa card (business closed down end 2017)
@@ -30,4 +31,9 @@ https://m-schmoock.github.io/bitcointax/
 
 ## Browserify the lib
 
-browserify index.js --standalone bitcointaxlib > js/bitcointaxlib.js
+browserify bitcointaxlib.js --standalone bitcointaxlib > js/bitcointaxlib.js
+
+## Notes
+Version: 0.6
+Author: Michael Schmoock
+License: [MIT](https://opensource.org/licenses/MIT)
