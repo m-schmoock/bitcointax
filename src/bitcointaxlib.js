@@ -61,7 +61,7 @@ async function getTransaction(tx_hash_hex) {
 
 // Returns the history for a pubkey using p2pk, p2pkh, p2wsh, p2wpkh script types.
 // arg1
-//  * p2pk  030e7061b9fb18571cf2441b2a7ee2419933ddaa423bc178672cd11e87911616d1 
+//  * p2pk  030e7061b9fb18571cf2441b2a7ee2419933ddaa423bc178672cd11e87911616d1
 //  * p2pkh 0250863ad64a87ae8a2fe83c1af1a8403cb53f53e486d8511dad8a04887e5b2352
 async function getHistoryFromPubkey(pubkey_hex) {
     let pubkey = Buffer.from(pubkey_hex, "hex");
@@ -80,18 +80,20 @@ async function getHistoryFromPubkey(pubkey_hex) {
     let script_p2wsh = p2wsh.output; //.toString('hex');
     let script_p2wpkh = p2wpkh.output; //.toString('hex');
 
-    let ppk = getHistoryFromScript(script_p2pk);
-    let p44 = getHistoryFromScript(script_p2pkh);
-    let p49 = getHistoryFromScript(script_p2wsh);
-    let p84 = getHistoryFromScript(script_p2wpkh);
+    let proms = [
+        getHistoryFromScript(script_p2pk),
+        getHistoryFromScript(script_p2pkh),
+        getHistoryFromScript(script_p2wsh),
+        getHistoryFromScript(script_p2wpkh)
+    ];
 
-    return Promise.all([ppk, p44, p49, p84]).then(function(res){
+    return Promise.all(proms).then(function(res){
         return {
+            'all' : [].concat(...res),
             'p2pk' : res[0],
             'p2pkh' : res[1],
             'p2wsh' : res[2],
-            'p2wpkh' : res[3],
-            'all' : [].concat.apply([], res)
+            'p2wpkh' : res[3]
         };
     });
 }
