@@ -60,11 +60,12 @@ async function getTransaction(tx_hash_hex) {
 }
 
 // Returns the history for a pubkey using p2pk, p2pkh, p2wsh, p2wpkh script types.
-// arg1
-//  * p2pk  030e7061b9fb18571cf2441b2a7ee2419933ddaa423bc178672cd11e87911616d1
-//  * p2pkh 0250863ad64a87ae8a2fe83c1af1a8403cb53f53e486d8511dad8a04887e5b2352
-async function getHistoryFromPubkey(pubkey_hex) {
-    let pubkey = Buffer.from(pubkey_hex, "hex");
+// arg1 - the pubkey in hex string or binay buffer format:
+//  * p2pk   030e7061b9fb18571cf2441b2a7ee2419933ddaa423bc178672cd11e87911616d1
+//  * p2pkh  0250863ad64a87ae8a2fe83c1af1a8403cb53f53e486d8511dad8a04887e5b2352
+//  * p2wpkh 0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+async function getHistoryFromPubkey(pubkey) {
+    if (typeof(pubkey) === 'string') pubkey = Buffer.from(pubkey, "hex");
     let pubkey_hash = bitcoinjs.crypto.ripemd160(bitcoinjs.crypto.sha256(pubkey));
     let pubkey_hash_hex = pubkey_hash.toString('hex');
 
@@ -73,12 +74,15 @@ async function getHistoryFromPubkey(pubkey_hex) {
     let p2wpkh = bitcoinjs.payments.p2wpkh({ pubkey });
     let p2wsh = bitcoinjs.payments.p2sh({ redeem: p2wpkh });
 
-    let script_p2pk = p2pk.output;
     // P2PKH        OP_DUP OP_HASH160 <PUBKEY> OP_EQUALVERIFY OP_CHECKSIG
-    let script_p2pkh = p2pkh.output; // '76a914' + pubkey_hash_hex + '88ac';
-    // P2WPKH_P2SH  OP_HASH160 <WSHASH> OPS.OP_EQUAL  // 'a914' + wsh_hex + '87';
-    let script_p2wsh = p2wsh.output; //.toString('hex');
-    let script_p2wpkh = p2wpkh.output; //.toString('hex');
+    //              '76a914' + pubkey_hash_hex + '88ac'
+    // P2WPKH_P2SH  OP_HASH160 <WSHASH> OPS.OP_EQUAL
+    //              'a914' + wsh_hex + '87'
+
+    let script_p2pk = p2pk.output;
+    let script_p2pkh = p2pkh.output; //.toString('hex');
+    let script_p2wsh = p2wsh.output;
+    let script_p2wpkh = p2wpkh.output;
 
     let proms = [
         getHistoryFromScript(script_p2pk),
