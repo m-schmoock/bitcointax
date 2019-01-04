@@ -1,8 +1,11 @@
 let bitcoinjs = require('bitcoinjs-lib');
 let jayson = require('jayson');
 
+// hint: activate next line to ignore self signed certificates
+// or just use electrumx.schmoock.net which has a letsencrypt certificate.
+//process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 const ELECTRUM_HOST = 'electrumx.schmoock.net';
-const ELECTRUM_PORT = 50001;
+const ELECTRUM_PORT = 50002;
 let   ELECTRUM_CLIENTS = {};
 
 // Returns an electrum client having set the a protocol version.
@@ -12,7 +15,9 @@ async function getElectrumClient(version){
     if (ELECTRUM_CLIENTS[version]) return ELECTRUM_CLIENTS[version];
 
     ELECTRUM_CLIENTS[version] = new Promise(async function(resolve, reject){
-        let client = jayson.client.tcp({
+        let socket = 'tcp';
+        if (ELECTRUM_PORT === 50002) socket = 'tls';
+        let client = jayson.client[socket]({
             host : ELECTRUM_HOST,
             port : ELECTRUM_PORT
         });
@@ -64,10 +69,14 @@ async function getTransaction(tx_hash_hex) {
 //  * p2pk   030e7061b9fb18571cf2441b2a7ee2419933ddaa423bc178672cd11e87911616d1
 //  * p2pkh  0250863ad64a87ae8a2fe83c1af1a8403cb53f53e486d8511dad8a04887e5b2352
 //  * p2wpkh 0279BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
-async function getHistoryFromPubkey(pubkey) {
+// arg3 - OPTINAL the transaction type. any if not set.
+//  * 'p2pk'
+//  * 'p2pkh'
+//  * 'p2wsh'
+//  * 'p2wpkh'
+async function getHistoryFromPubkey(pubkey, type) {
     if (typeof(pubkey) === 'string') pubkey = Buffer.from(pubkey, "hex");
     let pubkey_hash = bitcoinjs.crypto.ripemd160(bitcoinjs.crypto.sha256(pubkey));
-    let pubkey_hash_hex = pubkey_hash.toString('hex');
 
     let p2pk = bitcoinjs.payments.p2pk({ pubkey });
     let p2pkh = bitcoinjs.payments.p2pkh({ pubkey });
@@ -75,7 +84,7 @@ async function getHistoryFromPubkey(pubkey) {
     let p2wsh = bitcoinjs.payments.p2sh({ redeem: p2wpkh });
 
     // P2PKH        OP_DUP OP_HASH160 <PUBKEY> OP_EQUALVERIFY OP_CHECKSIG
-    //              '76a914' + pubkey_hash_hex + '88ac'
+    //              '76a914' + pk_hash_hex + '88ac'
     // P2WPKH_P2SH  OP_HASH160 <WSHASH> OPS.OP_EQUAL
     //              'a914' + wsh_hex + '87'
 
