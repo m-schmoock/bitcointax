@@ -16,6 +16,6 @@
   "license": "ISC",
   "dependencies": {
     "bitcoinjs-lib": "^4.0.2",
-    "jayson": "^2.1.0"
+    "jayson": "^2.1.1"
   }
 }
