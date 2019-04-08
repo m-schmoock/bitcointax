@@ -10,6 +10,8 @@ const YEAR_MILLIS = 60*60*24*365*1000;
 const SATOSHI = 0.00000001;
 const BTCAVG_OLDEST_LOCAL = new Date("2013-09-03 00:00:00");
 
+var btcavg = btcavg_local;
+
 var _S;    // state variable
 var fifo   = true;
 var hodl   = true;
@@ -58,6 +60,7 @@ function fetchBtcAvg(){
 
 // loads btc average from localStorage cache
 function loadBtcAvg(){
+    return; // TODO: fixme using API creds. Take shipped data for now.
     // fetch recent BtcAvg data into localStorage
     // update only if most recent data is older than a day
     btcavg = JSON.parse(localStorage.btcavg || '[]');

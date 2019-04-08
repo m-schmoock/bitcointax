@@ -8,6 +8,9 @@
   },
   "main": "src/bitcointaxlib.js",
   "scripts": {
+    "btcavg_local" : "node src/btcavg_local.js > js/btcavg_local.js",
+    "btcavg_global" : "node src/btcavg_global.js > js/btcavg_global.js",
+    "btcavg" : "npm run btcavg_local; npm run btcavg_global",
     "node": "node --inspect -i -e \"let lib = require('./src/bitcointaxlib.js')\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "browserify": "browserify scr/bitcointaxlib.js --standalone bitcointaxlib > js/bitcointaxlib.js"
@@ -15,6 +18,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bitcoinaverage": "^1.2.1",
     "bitcoinjs-lib": "^4.0.2",
     "jayson": "^2.1.1"
   }
