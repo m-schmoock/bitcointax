@@ -1,12 +1,12 @@
-let bitcoinjs = require('bitcoinjs-lib');
-let jayson = require('jayson');
+const bitcoinjs = require('bitcoinjs-lib');
+const jayson = require('jayson');
 
 // hint: activate next line to ignore self signed certificates
 // or just use electrumx.schmoock.net which has a letsencrypt certificate.
 //process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 const ELECTRUM_HOST = 'electrumx.schmoock.net';
 const ELECTRUM_PORT = 50002;
-let   ELECTRUM_CLIENTS = {};
+const ELECTRUM_CLIENTS = {};
 
 // Returns an electrum client having set the a protocol version.
 // arg1 - version string - default '1.4'
