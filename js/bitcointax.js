@@ -13,8 +13,6 @@ const BTCAVG_OLDEST_LOCAL = new Date("2013-09-03 00:00:00");
 var btcavg = btcavg_local;
 
 var _S;    // state variable
-var fifo   = true;
-var hodl   = true;
 
 // math round helpers
 Number.prototype.r2 = function(){ return Math.round(this * 1e2) / 1e2; }
@@ -22,6 +20,8 @@ Number.prototype.r4 = function(){ return Math.round(this * 1e4) / 1e4; }
 
 function newState(){
     return {
+        fifo : true,
+        hodl : true,
         buys  : [],
         sells : [],
         stake : [],
@@ -40,11 +40,13 @@ function newYear(index){
 }
 
 function cleanup(){
-    fifo   = true;
-    hodl   = true;
     $('#history').empty();
     $('#sells').empty();
     _S = newState();
+    var check_fifo = $('.check_fifo');
+    var check_hodl = $('.check_hodl');
+    _S.fifo = check_fifo.length > 0 ? check_fifo.prop('checked'): _S.fifo;
+    _S.hodl = check_hodl.length > 0 ? check_hodl.prop('checked'): _S.hodl;
     newYear("all");
 }
 
@@ -96,7 +98,7 @@ function yearlyControls(){
         var year = sell.date.getFullYear();
         if (inputyears[year]) return true;
         inputyears[year] = true;
-        var controls = '<div style="float:left; margin-right:10px">['+year+': <label><input class="check_fifo_year" name="check_fifo_'+year+'" id="check_fifo_'+year+'" type="radio" '+(fifo?'checked':'')+'>FIFO</label><label><input class="check_lifo_year" name="check_fifo_'+year+'" id="check_lifo_'+year+'" type="radio" '+(fifo?'':'checked')+'>LIFO</label>]</div>';
+        var controls = '<div style="float:left; margin-right:10px">['+year+': <label><input class="check_fifo_year" name="check_fifo_'+year+'" id="check_fifo_'+year+'" type="radio" '+(_S.fifo?'checked':'')+'>FIFO</label><label><input class="check_lifo_year" name="check_fifo_'+year+'" id="check_lifo_'+year+'" type="radio" '+(_S.fifo?'':'checked')+'>LIFO</label>]</div>';
         $('#yearlySettings').append($(controls));
 
         // set 2013 to LIFO (because I did it that way)
@@ -130,14 +132,14 @@ $(document).ready(function(){
     // bind GUI handlers
     $('#files').change(readFiles);
     $('.check_fifo').change(function(e){
-        if ($(this).prop('id') == 'check_fifo' && $(this).prop('checked')) fifo = true;
-        if ($(this).prop('id') == 'check_lifo' && $(this).prop('checked')) fifo = false;
+        if ($(this).prop('id') == 'check_fifo' && $(this).prop('checked')) _S.fifo = true;
+        if ($(this).prop('id') == 'check_lifo' && $(this).prop('checked')) _S.fifo = false;
         // update yearly controls if changed
-        $('.check_fifo_year').prop('checked', fifo);
-        $('.check_lifo_year').prop('checked', !fifo);
+        $('.check_fifo_year').prop('checked', _S.fifo);
+        $('.check_lifo_year').prop('checked', !_S.fifo);
     });
     $('.check_hodl').change(function(e){
-        hodl = $(this).prop('checked');
+        _S.hodl = $(this).prop('checked');
     });
 });
 
@@ -535,7 +537,7 @@ function doMath(){
             if (!_S.years[year]) newYear(year);
 
             // get fifo settings globally or per year if given
-            let _fifo = fifo;
+            let _fifo = _S.fifo;
             if ($('#check_fifo_'+year).length === 1){
                 if ($('#check_fifo_'+year).prop('checked')) _fifo = true;
                 else _fifo = false;
@@ -593,7 +595,7 @@ function doMath(){
 
             // germany: coins older than a year are tax free
             // TODO: this can apply to a fraction of a sell
-            if (hodl && sell.date - last_sell > YEAR_MILLIS && profit > 0.0) profit = 0;
+            if (_S.hodl && sell.date - last_sell > YEAR_MILLIS && profit > 0.0) profit = 0;
 
             // update this sell
             sell.bought_eur = beur.r2();
@@ -813,7 +815,7 @@ function test(){
 
     // simple lifo rest check and wrong order
     cleanup();
-    fifo = false;
+    _S.fifo = false;
     doBitcoinDe(';;;;;;;;;;\n' +
 `"2015-01-03 03:00:00";Verkauf;"BTC / EUR"; 3;300;0.7;210;0.7;210;-0.7;0
 "2015-01-02 02:00:00";Kauf;"BTC / EUR";     2;200;0.5;100;0.5;100; 0.5;0
