@@ -514,7 +514,7 @@ function doMath(){
             rate = btcavgLookup(evt.date);
         } catch(e) {
             rate = evt.rate
-            if (!rate) throw Error('No rate given: '+evt);
+            if (!rate) throw Error('No rate given: '+JSON.stringify(evt));
         }
 
         _S.stake.push({
