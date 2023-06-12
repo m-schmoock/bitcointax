@@ -34,6 +34,6 @@ https://m-schmoock.github.io/bitcointax/
 browserify bitcointaxlib.js --standalone bitcointaxlib > js/bitcointaxlib.js
 
 ## Notes
-Version: 0.6
+Version: 0.7
 Author: Michael Schmoock
 License: [MIT](https://opensource.org/licenses/MIT)

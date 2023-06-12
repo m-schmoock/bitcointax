@@ -22,7 +22,7 @@ async function getElectrumClient(version){
             port : ELECTRUM_PORT
         });
 
-        client.request('server.version', ["bitcointaxlib 0.6", version], function(err, result) {
+        client.request('server.version', ["bitcointaxlib 0.7", version], function(err, result) {
             if(err) reject(err);
             // console.log(result.result[0]); // server version string
             resolve(client);

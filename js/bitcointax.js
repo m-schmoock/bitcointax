@@ -1,4 +1,4 @@
-const PREFIX_BTCDE         = 'Datum;Typ;W'; //ährungen;Referenz;Kurs;"BTC vor Gebühr";"EUR vor Gebühr";"BTC nach Gebühr";"EUR nach Gebühr";"Zu- / Abgang";Kontostand';
+const PREFIX_BTCDE         = 'Datum;Typ;W';//ährung;Referenz;BTC-Adresse;Kurs;"Einheit (Kurs)";"BTC vor Gebühr";"Menge vor Gebühr";"Einheit (Menge vor Gebühr)";"BTC nach Bitcoin.de-Gebühr";"Menge nach Bitcoin.de-Gebühr";"Einheit (Menge nach Bitcoin.de-Gebühr)";"Zu- / Abgang";Kontostand';
 const PREFIX_BITWALA_BANK  = '"Recipient IBAN","Reference","Amount","Currency","Created At","Updated At","ID"';
 const PREFIX_BITWALA_TOPUP = '"Amount","Currency","Created At","Updated At","ID","Card ID"';
 const PREFIX_XAPO          = 'datetime,description,btc_amount,btc_debits,btc_credits,currency,currency_amount,status,from,to,btc_txid,initiated_by,notes';
@@ -83,6 +83,32 @@ function processInput(){
         else if (data.startsWith(PREFIX_OTC))           doOtc(data);
         else if (data.startsWith(PREFIX_WALLETS))       doWallets(data);
         else alert('Input not suported: '+$(e).prev().html());
+        postProcessInput();
+    });
+}
+
+function postProcessInput(){
+    // gets rates if unset
+    function setRate(tx){
+        if (!tx.rate){
+            // try to get rate from btcavg or from event as fallback
+            try {
+                tx['rate'] = btcavgLookup(tx.date);
+            } catch(e) {
+                throw Error('No rate given: '+JSON.stringify(tx));
+            }
+        }
+    }
+    // calculate actual rate, regarding tax excempt fee, from event
+    $.each(_S.buys, function(index, tx){
+        setRate(tx);
+        let rate_fee = (tx.vol_eur + tx.fee_eur) / tx.vol_btc;
+        tx['rate_fee'] = rate_fee.r2();
+    });
+    $.each(_S.sells, function(index, tx){
+        setRate(tx);
+        let rate_fee = (tx.vol_eur - tx.fee_eur) / tx.vol_btc;
+        tx['rate_fee'] = rate_fee.r2();
     });
 }
 
@@ -173,32 +199,32 @@ function doBitcoinDe(data){
 
     // add TX to buys and sells
     $.each(csv, function(index, row){
-        if (row.length != 11) throw 'Error: invalid btcde data at line '+index;
+        if (row.length != 15) throw 'Error: invalid number of btcde entries in line '+index+': '+row.length;
         if (index == 0) return true; // skip header
 
         var buy  = row[1] == 'Kauf';
         var sell = row[1] == 'Verkauf';
         if (!(buy || sell)) return true;
 
-        var curr = row[2];
+        // check currency
+        var curr = row[6];
         if (curr !== 'BTC / EUR') throw 'Error: only euro supported';
 
-        var vol_btc = Number(row[7]);
-        var vol_eur = Number(row[8]);
-        var fee_eur = Number(row[6]) - vol_eur;
-        // note: we use rate without fees
-        var rate    = vol_eur/vol_btc; // Number(row[4]); 
+        var vol_btc  = Number(row[7]);
+        var vol_eur  = Number(row[8]);
+        var fee_eur  = vol_eur - Number(row[11]);
+        var rate     = Number(row[5]);
 
         var tx = {
-            source  : 'btcde',
-            index   : index,
-            date    : new Date(row[0]),
-            ref     : row[3],
-            vol_btc : vol_btc.r4(),
-            vol_eur : vol_eur.r2(),
-            fee_eur : fee_eur.r2(),
-            rate    : rate.r2(),
-            rest    : 1.0,
+            source   : 'btcde',
+            index    : index,
+            date     : new Date(row[0]),
+            ref      : row[3],
+            vol_btc  : vol_btc.r4(),
+            vol_eur  : vol_eur.r2(),
+            fee_eur  : fee_eur.r2(),
+            rate     : rate.r2(),
+            rest     : 1.0,
         };
 
         if (buy) _S.buys.push(tx);
@@ -234,7 +260,6 @@ function doBitwalaBank(data){
         // bitwala has minimal 1 Eur fix fee or 0.5% for any TX
         var fee_eur = Math.max(1.0, vol_eur * 0.005);
         // also bitpay is taking its share via hidden fees in bad rates
-
         var vol_btc = (vol_eur + fee_eur) / btcavg_rate;
 
         _S.sells.push({
@@ -278,7 +303,6 @@ function doBitwalaTopup(data){
         // bitwala has minimal 1 Eur fix fee or 0.5% for any TX
         var fee_eur = Math.max(1.0, vol_eur * 0.005);
         // also bitpay is taking its share via hidden fees in bad rates
-
         var vol_btc = (vol_eur + fee_eur) / btcavg_rate;
 
         _S.sells.push({
@@ -328,7 +352,6 @@ function doXapo(data){
 
         var rate = vol_eur / vol_btc;
         var btcavg_rate = btcavgLookup(date);
-        var fee_rate = (btcavg_rate / rate) - 1.0;
 
         var tx = {
             source  : 'xapo',
@@ -337,7 +360,6 @@ function doXapo(data){
             ref     : 'xapo_'+index,
             vol_btc : vol_btc.r4(),
             vol_eur : (vol_btc * rate).r2(),
-            //fee_eur : (vol_eur * fee_rate).r2(), // xapo has hidden exchange fee
             fee_eur : 0,
             rate    : rate.r2(),
             rest    : 1.0,
@@ -510,21 +532,12 @@ function doMath(){
             eur -= evt.vol_eur;
         }
 
-        // try to get rate from btcavg or from event as fallback
-        let rate;
-        try {
-            rate = btcavgLookup(evt.date);
-        } catch(e) {
-            rate = evt.rate
-            if (!rate) throw Error('No rate given: '+JSON.stringify(evt));
-        }
-
         _S.stake.push({
             "evt" : evt,
             "date" : evt.date,
-            "rate" : rate,
+            "rate" : evt.rate_fee,
             "btc" : btc,
-            "eur" : rate * btc,
+            "eur" : evt.rate_fee * btc,
             "avg_eur" : eur / btc,
         });
     });
@@ -563,13 +576,13 @@ function doMath(){
 
             // now sell as much from buy-stack as needed
             while (rest > SATOSHI){ // can't sell sub satoshis :>
-                if (frame < 0 || frame >= _S.buys.length) throw "ERROR: nothing to sell - ran out of prior buys";
+                if (frame < 0 || frame >= _S.buys.length) throw "ERROR: nothing to sell - ran out of prior buys for selling: "+sell.vol_btc;
                 head = _S.buys[frame];
 
                 while (head.rest <= 0.0 && frame >= 0 && frame < _S.buys.length) {
                     if (_fifo) frame++;
                     else frame--;
-                    if (frame < 0 || frame >= _S.buys.length) throw "ERROR: nothing to sell - ran out of prior buys";
+                    if (frame < 0 || frame >= _S.buys.length) throw "ERROR: nothing to sell - ran out of prior buys for selling: "+sell.vol_btc;
                     head = _S.buys[frame];
                 }
 
@@ -761,54 +774,54 @@ function test(){
         }
     }
 
-    doBitcoinDe(';;;;;;;;;;\n' +
-`"2015-01-05 10:19:02";Kauf;"BTC / EUR";REF01;239.88;1.50000000;359.82;1.48500000;358.02;1.48500000;0.0
-"2015-01-05 22:55:36";Auszahlung;;298d8ef7a...;;;;;;0.0;0.0
-"2015-01-06 11:23:03";Kauf;"BTC / EUR";REF02;227.00;0.50000000;113.50;0.49500000;112.93;0.49500000;0.0
-"2015-01-07 23:56:01";Verkauf;"BTC / EUR";REF03;244.59;0.50000000;122.29;0.49500000;121.68;-0.50000000;0.0`);
-    
-    assert(_S.buys.length === 2, 'invalid number of buys');
-    assert(_S.sells.length === 1, 'invalid number of sells');
+    doBitcoinDe(';;;;;;;;;;;;;;\n' +
+`"2015-01-05 10:19:02";Kauf;BTC;REF01;;239.88;"BTC / EUR";1.50000000;359.82;EUR;1.48500000;358.02;EUR;1.48500000;3.60140000
+"2015-01-05 22:55:36";Auszahlung;BTC;;;;;;;;;;;-0.60140000;3.00000000
+"2015-01-06 11:23:03";Kauf;BTC;REF02;;227.00;"BTC / EUR";0.50000000;113.50;EUR;0.49500000;112.93;EUR;0.49500000;3.49500000
+"2015-01-07 23:56:01";Verkauf;BTC;REF03;;244.59;"BTC / EUR";0.50000000;122.29;EUR;0.49500000;121.68;EUR;-0.50000000;2.99500000`);
+
+    assert(_S.buys.length === 2, 'invalid number of buys: ' + _S.buys.length);
+    assert(_S.sells.length === 1, 'invalid number of sells: ' + _S.sells.length);
     assert(Object.keys(_S.buys[0]).length === 9, 'invalid number of buy properties');
     assert(Object.keys(_S.sells[0]).length === 9, 'invalid number of sell properties');
 
-    assert(_S.buys[0].date.getTime() === 1420449542000);
-    assert(_S.buys[0].source === 'btcde');
-    assert(_S.buys[0].index === 1);
-    assert(_S.buys[0].ref === 'REF01');
-    assert(_S.buys[0].vol_btc === 1.485);
-    assert(_S.buys[0].vol_eur === 358.02); // note: without fees
-    assert(_S.buys[0].fee_eur === 1.8);
-    assert(_S.buys[0].rate === 241.09); // note: rate is also without fees.
-    assert(_S.buys[0].rest === 1);
+    assert(_S.buys[0].date.getTime() === 1420449542000, _S.buys[0].date.getTime());
+    assert(_S.buys[0].source === 'btcde', _S.buys[0].source);
+    assert(_S.buys[0].index === 1, _S.buys[0].index);
+    assert(_S.buys[0].ref === 'REF01', _S.buys[0].ref);
+    assert(_S.buys[0].vol_btc === 1.5, _S.buys[0].vol_btc);
+    assert(_S.buys[0].vol_eur === 359.82, _S.buys[0].vol_eur);
+    assert(_S.buys[0].fee_eur === 1.8, _S.buys[0].fee_eur);
+    assert(_S.buys[0].rate === 239.88, _S.buys[0].rate);
+    assert(_S.buys[0].rest === 1, _S.buys[0].rest);
 
-    assert(_S.sells[0].date.getTime() === 1420671361000);
-    assert(_S.sells[0].source === 'btcde');
-    assert(_S.sells[0].index === 4);
-    assert(_S.sells[0].ref === 'REF03');
-    assert(_S.sells[0].vol_btc === 0.495);
-    assert(_S.sells[0].vol_eur === 121.68);
-    assert(_S.sells[0].fee_eur === 0.61);
-    assert(_S.sells[0].rate === 245.82);
-    assert(_S.sells[0].rest === 1);
-    assert(_S.sells[0].index === 4);
+    assert(_S.sells[0].date.getTime() === 1420671361000, _S.sells[0].date.getTime());
+    assert(_S.sells[0].source === 'btcde', _S.sells[0].source);
+    assert(_S.sells[0].index === 4, _S.sells[0].index);
+    assert(_S.sells[0].ref === 'REF03', _S.sells[0].ref);
+    assert(_S.sells[0].vol_btc === 0.5, _S.sells[0].vol_btc);
+    assert(_S.sells[0].vol_eur === 122.29, _S.sells[0].vol_eur);
+    assert(_S.sells[0].fee_eur === 0.61, _S.sells[0].fee_eur);
+    assert(_S.sells[0].rate === 244.59,_S.sells[0].rate);
+    assert(_S.sells[0].rest === 1, _S.sells[0].rest);
+    assert(_S.sells[0].index === 4, _S.sells[0].index);
 
 
     // simple fifo rest check
     cleanup();
-    doBitcoinDe(';;;;;;;;;;\n' +
-`"2015-01-01 01:00:00";Kauf;"BTC / EUR";   1;100;0.5;50 ;0.5;50 ; 0.5;0
-"2015-01-02 02:00:00";Kauf;"BTC / EUR";    2;200;0.5;100;0.5;100; 0.5;0
-"2015-01-03 03:00:00";Verkauf;"BTC / EUR"; 3;300;0.7;210;0.7;210;-0.7;0`);
+    doBitcoinDe(`;;;;;;;;;;;;;;
+"2015-01-01 01:00:00";Kauf;"BTC";"1";;100;"BTC / EUR";0.5;50;EUR;0.5;50;0.5;0;
+"2015-01-02 02:00:00";Kauf;"BTC";"2";;200;"BTC / EUR";0.5;100;EUR;0.5;100;0.5;0;
+"2015-01-03 03:00:00";Verkauf;"BTC";"3";;300;"BTC / EUR";0.7;210;EUR;0.7;210;-0.7;0;`);
     doMath();
     assert(_S.buys[0].rest === 0,        'fifo should sell first first');
     assert(_S.buys[1].rest.r4() === 0.6, 'wrong fraction remaining');
     assert(_S.sells[0].rest === 0,       'did no sell all');
 
-    assert(_S.years['2015'].invest === 150,     'wrong invested euro');
-    assert(_S.years['2015'].liquidated === 210, 'wrong liquidated euro');
-    assert(_S.years['2015'].bought_for === 90,  'wrong bought for');
-    assert(_S.years['2015'].profit === 120,     'wrong profit');
+    assert(_S.years['2015'].invest === 150,     'wrong invested euro:'+_S.years['2015'].invest);
+    assert(_S.years['2015'].liquidated === 210, 'wrong liquidated euro:'+_S.years['2015'].liquidated);
+    assert(_S.years['2015'].bought_for === 90,  'wrong bought for:'+_S.years['2015'].bought_for);
+    assert(_S.years['2015'].profit === 120,     'wrong profit:'+_S.years['2015'].profit);
 
     assert(_S.stake[2].btc.r4() === 0.3, 'wrong remaining btc stake');
     assert(_S.stake[2].avg_eur.r4() === -200, 'wrong avg_eur stake');
@@ -816,10 +829,10 @@ function test(){
     // simple lifo rest check and wrong order
     cleanup();
     _S.fifo = false;
-    doBitcoinDe(';;;;;;;;;;\n' +
-`"2015-01-03 03:00:00";Verkauf;"BTC / EUR"; 3;300;0.7;210;0.7;210;-0.7;0
-"2015-01-02 02:00:00";Kauf;"BTC / EUR";     2;200;0.5;100;0.5;100; 0.5;0
-"2015-01-01 01:00:00";Kauf;"BTC / EUR";     1;100;0.5;50 ;0.5;50 ; 0.5;0`);
+    doBitcoinDe(`;;;;;;;;;;;;;;
+"2015-01-03 03:00:00";Verkauf;"BTC";"3";;300;"BTC / EUR";0.7;210;EUR;0.7;210;-0.7;0;
+"2015-01-02 02:00:00";Kauf;"BTC";"2";;200;"BTC / EUR";0.5;100;EUR;0.5;100;0.5;0;
+"2015-01-01 01:00:00";Kauf;"BTC";"1";;100;"BTC / EUR";0.5;50;EUR;0.5;50;0.5;0;`);
     doMath();
     assert(_S.buys[0].rest.r4() === 0.6, 'wrong fraction remaining');
     assert(_S.buys[1].rest === 0,        'lifo should sell last first');
@@ -835,10 +848,10 @@ function test(){
 
     // test sell more than bought fails
     cleanup();
-    doBitcoinDe(';;;;;;;;;;\n' +
-`"2015-01-01 01:00:00";Kauf;"BTC / EUR";   1;100;0.5;50 ;0.5;50 ; 0.5;0
-"2015-01-02 02:00:00";Kauf;"BTC / EUR";    2;200;0.5;100;0.5;100; 0.5;0
-"2015-01-03 03:00:00";Verkauf;"BTC / EUR"; 3;300;1.5;450;1.5;450;-1.5;0`);
+    doBitcoinDe(`;;;;;;;;;;;;;;
+"2015-01-01 01:00:00";Kauf;"BTC";"1";;100;"BTC / EUR";0.5;50;EUR;0.5;50;0.5;0;
+"2015-01-02 02:00:00";Kauf;"BTC";"2";;200;"BTC / EUR";0.5;100;EUR;0.5;100; 0.5;0;
+"2015-01-03 03:00:00";Verkauf;"BTC";"3";;300;"BTC / EUR";1.5;450;EUR;1.5;450;-1.5;0;`);
     try {
         doMath();
     } catch (e) {
@@ -847,10 +860,10 @@ function test(){
 
     // test with sell rate of 0 (donation)
     cleanup();
-    doBitcoinDe(';;;;;;;;;;\n' +
-`"2015-01-01 01:00:00";Kauf;"BTC / EUR";   1;100;0.5;50 ;0.5;50 ; 0.5;0
-"2015-01-02 02:00:00";Kauf;"BTC / EUR";    2;200;0.5;100;0.5;100; 0.5;0
-"2015-01-03 03:00:00";Verkauf;"BTC / EUR"; 3;0;0.7;0;0.7;0;-0.7;0`);
+    doBitcoinDe(`;;;;;;;;;;;;;;
+"2015-01-01 01:00:00";Kauf;"BTC";"1";;100;"BTC / EUR";0.5;50;EUR;0.5;50 ; 0.5;0;
+"2015-01-02 02:00:00";Kauf;"BTC";"2";;200;"BTC / EUR";0.5;100;EUR;0.5;100; 0.5;0;
+"2015-01-03 03:00:00";Verkauf;"BTC";"3";;0;"BTC / EUR";0.7;0;EUR;0.7;0;-0.7;0;`);
     doMath();
     assert(_S.sells[0].profit_eur === -90);
     assert(_S.stake[2].btc.r4() === 0.3);
@@ -862,7 +875,6 @@ function test(){
     // TODO: test for fee calculation
     // TODO: moar tests
     // replace $.each with proper looping when not gui related
-
 
     if (fails > 0) alert('There were unit tests failures, check console!');
     else console.log('Unit tests passed.');
